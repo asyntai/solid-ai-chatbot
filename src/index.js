@@ -5,8 +5,8 @@
  * or SolidStart app. It renders nothing itself: the widget draws its own bubble.
  *
  * Plain JavaScript with no JSX, so it needs no compile step in the host app.
- * createEffect does not run during server rendering, so nothing here touches
- * window or document on the server.
+ * Works with Solid 1 and Solid 2. The page is touched only in the browser part
+ * of the effect, which never runs during server rendering.
  */
 
 import { createEffect, onCleanup } from 'solid-js';
@@ -60,28 +60,55 @@ export function addWidgetScript(widgetId, scriptUrl) {
  * delay the host page. This cannot.
  */
 export function AiChatbot(props) {
-  createEffect(() => {
-    if (props.enabled === false) {
+  // Reads the props, so the effect runs again when one of them changes. Solid 2
+  // also runs this part on the server, so it must not touch the page.
+  const read = () => ({
+    enabled: props.enabled,
+    widgetId: props.widgetId,
+    scriptUrl: props.scriptUrl,
+  });
+
+  // Browser only. Returns a cleanup function, or nothing.
+  const apply = ({ enabled, widgetId, scriptUrl }) => {
+    if (enabled === false) {
       return;
     }
-    let widgetId;
+    let id;
     try {
-      widgetId = validateWidgetId(props.widgetId);
+      id = validateWidgetId(widgetId);
     } catch (err) {
       // A chat widget must never take the host app down, so this logs and stops.
       console.error(err.message);
       return;
     }
-    const scriptUrl = props.scriptUrl;
-    const load = () => addWidgetScript(widgetId, scriptUrl);
+    const load = () => addWidgetScript(id, scriptUrl);
 
     if (document.readyState === 'complete') {
       load();
       return;
     }
     window.addEventListener('load', load, { once: true });
-    onCleanup(() => window.removeEventListener('load', load));
-  });
+    return () => window.removeEventListener('load', load);
+  };
+
+  // One call for both versions. Solid 2 runs read, then calls apply with the
+  // result. Solid 1 has no apply step: it treats the second argument as the
+  // first "previous value", so on the first run prev === apply, and this
+  // function does the apply step itself.
+  let solid1;
+  createEffect((prev) => {
+    const state = read();
+    if (solid1 === undefined) {
+      solid1 = prev === apply;
+    }
+    if (solid1) {
+      const cleanup = apply(state);
+      if (cleanup) {
+        onCleanup(cleanup);
+      }
+    }
+    return state;
+  }, apply);
 
   return null;
 }

@@ -10,6 +10,7 @@
 import assert from 'node:assert/strict';
 import { beforeEach, test } from 'node:test';
 import { JSDOM } from 'jsdom';
+import * as Solid from 'solid-js';
 import { createRoot, createSignal } from 'solid-js';
 import AiChatbotDefault, {
   AiChatbot,
@@ -48,11 +49,21 @@ function capturedErrors(fn) {
   return seen;
 }
 
+// Solid 2 runs effects in a later step. flush runs them now. Solid 1 runs them
+// when the root returns, and has no flush.
+function settle() {
+  if (typeof Solid.flush === 'function') {
+    Solid.flush();
+  }
+}
+
 function mount(props) {
-  return createRoot((dispose) => {
+  const mounted = createRoot((dispose) => {
     const output = AiChatbot(props);
     return { dispose, output };
   });
+  settle();
+  return mounted;
 }
 
 beforeEach(() => freshPage());
@@ -170,6 +181,7 @@ test('a signal that turns enabled on loads the widget', () => {
   });
   assert.equal(scripts().length, 0);
   setConsent(true);
+  settle();
   assert.equal(scripts().length, 1);
   dispose();
 });
@@ -184,6 +196,7 @@ test('a widget ID that arrives later loads the widget', () => {
       },
     });
     setId(ID);
+    settle();
   });
   assert.equal(errors.length, 1);
   assert.equal(scripts()[0].getAttribute('data-asyntai-id'), ID);

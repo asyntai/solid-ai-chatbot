@@ -95,7 +95,7 @@ documents and question and answer pairs.
 
 ## Compatibility
 
-Solid 1.6 and later in the 1.x line, and SolidStart 1 and 2.
+Solid 1.6 and later, including Solid 2, and SolidStart.
 
 ## Removing it
 

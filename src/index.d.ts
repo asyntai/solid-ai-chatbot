@@ -1,5 +1,3 @@
-import type { JSX } from 'solid-js';
-
 export interface AiChatbotProps {
   /** Your Asyntai widget ID, for example `asyntai_1a2b3c4d5e6f`. Required. */
   widgetId: string;
@@ -10,7 +8,7 @@ export interface AiChatbotProps {
 }
 
 /** Adds the Asyntai chat widget to the page. Renders nothing itself. */
-export function AiChatbot(props: AiChatbotProps): JSX.Element;
+export function AiChatbot(props: AiChatbotProps): null;
 export default AiChatbot;
 
 export function validateWidgetId(widgetId: unknown): string;
